@@ -4,6 +4,7 @@ import path from "path";
 import apiRoutes from "./routes/api";
 import htmlRoutes from "./routes/htmlRoutes";
 
+
 dotenv.config();
 
 const app = express();
