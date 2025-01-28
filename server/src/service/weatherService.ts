@@ -1,90 +1,22 @@
-import dotenv from "dotenv";
-import axios from "axios";
-dotenv.config();
+import axios from 'axios';
 
-interface Coordinates {
-  lat: number;
-  lon: number;
-}
+const API_KEY = 'your-openweather-api-key'; // Replace with your actual OpenWeather API key
+const BASE_URL = 'https://api.openweathermap.org/data/2.5/forecast';
 
-class Weather {
-  date: string;
-  icon: string;
-  description: string;
-  temperature: number;
-  humidity: number;
-  windSpeed: number;
-
-  constructor(
-    date: string,
-    icon: string,
-    description: string,
-    temperature: number,
-    humidity: number,
-    windSpeed: number
-  ) {
-    this.date = date;
-    this.icon = icon;
-    this.description = description;
-    this.temperature = temperature;
-    this.humidity = humidity;
-    this.windSpeed = windSpeed;
-  }
-}
-
-class WeatherService {
-  private baseURL = "https://api.openweathermap.org";
-  private apiKey = process.env.API_KEY || "";
-
-  private async fetchLocationData(city: string): Promise<any> {
-    const url = `${this.baseURL}/geo/1.0/direct?q=${city}&limit=1&appid=${this.apiKey}`;
-    const response = await axios.get(url);
-    if (!response.data || response.data.length === 0) {
-      throw new Error("No location data found for the specified city.");
-    }
-    return response.data[0];
-  }
-
-  private async fetchWeatherData(coordinates: Coordinates): Promise<any> {
-    const url = `${this.baseURL}/data/2.5/forecast?lat=${coordinates.lat}&lon=${coordinates.lon}&units=metric&appid=${this.apiKey}`;
-    const response = await axios.get(url);
-    if (!response.data) {
-      throw new Error("No weather data found for the specified coordinates.");
-    }
-    return response.data;
-  }
-
-  public async getWeatherForCity(city: string): Promise<{ current: Weather; forecast: Weather[] }> {
-    const locationData = await this.fetchLocationData(city);
-    const coordinates: Coordinates = {
-      lat: locationData.lat,
-      lon: locationData.lon,
-    };
-    const weatherData = await this.fetchWeatherData(coordinates);
-
-    const current = new Weather(
-      weatherData.list[0].dt_txt,
-      weatherData.list[0].weather[0].icon,
-      weatherData.list[0].weather[0].description,
-      weatherData.list[0].main.temp,
-      weatherData.list[0].main.humidity,
-      weatherData.list[0].wind.speed
-    );
-
-    const forecast = weatherData.list.slice(1, 6).map((data: any) => {
-      return new Weather(
-        data.dt_txt,
-        data.weather[0].icon,
-        data.weather[0].description,
-        data.main.temp,
-        data.main.humidity,
-        data.wind.speed
-      );
+export const getWeatherData = async (cityName: string) => {
+  try {
+    // Construct the API URL
+    const response = await axios.get(BASE_URL, {
+      params: {
+        q: cityName,
+        units: 'metric', // Celsius temperature
+        appid: API_KEY,
+      },
     });
 
-    return { current, forecast };
+    // Return the weather data
+    return response.data;
+  } catch (error) {
+    throw new Error('Failed to fetch weather data.');
   }
-}
-
-export default new WeatherService();
-
+};

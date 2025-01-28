@@ -1,66 +1,39 @@
-import fs from "fs/promises";
-import path from "path";
+import fs from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid'; // Install the uuid package: npm install uuid
 
-class City {
-  id: string;
-  name: string;
+const HISTORY_FILE_PATH = path.join(__dirname, '../../db/searchHistory.json');
 
-  constructor(id: string, name: string) {
-    this.id = id;
-    this.name = name;
+// Read the search history from the JSON file
+export const getSearchHistory = async () => {
+  try {
+    const data = await fs.promises.readFile(HISTORY_FILE_PATH, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    throw new Error('Failed to read search history.');
   }
-}
+};
 
-class HistoryService {
-  private filePath = path.resolve(__dirname, "../../db/searchHistory.json");
+// Save a new city to the search history
+export const saveCityToHistory = async (cityName: string) => {
+  const history = await getSearchHistory();
 
-  private async read(): Promise<City[]> {
-    try {
-      const data = await fs.readFile(this.filePath, "utf-8");
-      return JSON.parse(data) as City[];
-    } catch (error) {
-      console.error("Error reading search history:", error);
-      return [];
-    }
-  }
-
-  private async write(cities: City[]): Promise<void> {
-    try {
-      await fs.writeFile(this.filePath, JSON.stringify(cities, null, 2), "utf-8");
-    } catch (error) {
-      console.error("Error writing search history:", error);
-    }
+  // Check if the city already exists in the search history
+  const existingCity = history.find((entry: { cityName: string }) => entry.cityName === cityName);
+  if (existingCity) {
+    return existingCity.id; // Return the existing city's ID
   }
 
-  public async getCities(): Promise<City[]> {
-    return await this.read();
-  }
+  // Create a new city entry with a unique ID
+  const city = {
+    id: uuidv4(),
+    cityName,
+  };
 
-  public async addCity(cityName: string): Promise<City> {
-    const cities = await this.read();
-    const existingCity = cities.find(
-      (city) => city.name.toLowerCase() === cityName.toLowerCase()
-    );
+  history.push(city);
 
-    if (existingCity) {
-      return existingCity;
-    }
+  // Write the updated search history back to the JSON file
+  await fs.promises.writeFile(HISTORY_FILE_PATH, JSON.stringify(history, null, 2));
 
-    const newCity = new City(this.generateId(), cityName);
-    cities.push(newCity);
-    await this.write(cities);
-    return newCity;
-  }
-
-  public async removeCity(id: string): Promise<void> {
-    const cities = await this.read();
-    const updatedCities = cities.filter((city) => city.id !== id);
-    await this.write(updatedCities);
-  }
-  
-  private generateId(): string {
-    return Math.random().toString(36).substr(2, 9);
-  }
-}
-
-export default new HistoryService();
+  return city.id;
+};
